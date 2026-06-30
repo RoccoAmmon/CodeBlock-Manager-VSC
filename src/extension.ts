@@ -200,6 +200,7 @@ async function verarbeiteClipboard(clip: string, manuell: boolean) {
             const ok = await zeigeDiffUndBestaetige(dokument, vorschlag);
             if (!ok) {
                 setzeStatus('Verworfen.');
+                letzteClipboard = ''; // Live-Timer zurücksetzen, damit erneutes Kopieren erkannt wird
                 return;
             }
         }
@@ -228,6 +229,9 @@ async function verarbeiteClipboard(clip: string, manuell: boolean) {
             vscode.window.showErrorMessage('Aenderung konnte nicht angewendet werden.');
             return;
         }
+
+        // Clipboard-Cache aktualisieren (Live-Timer und Manual in Sync halten)
+        letzteClipboard = clip;
 
         // Dokument wieder in den Vordergrund holen (nach evtl. Diff-Ansicht)
         const sichtbar = await vscode.window.showTextDocument(dokument, { preview: false });
@@ -291,8 +295,9 @@ async function zeigeDiffUndBestaetige(dok: vscode.TextDocument, vorschlag: strin
             'Uebernehmen', 'Verwerfen'
         );
 
-        // Diff-Ansicht schliessen
+        // Diff-Ansicht schliessen und zurueck zum Original springen
         await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+        await vscode.window.showTextDocument(dok, { preview: false });
         return wahl === 'Uebernehmen';
     } finally {
         vorschauInhalte.delete(key);
