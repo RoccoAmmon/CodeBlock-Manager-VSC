@@ -2,8 +2,9 @@
   "name": "codeblock-manager",
   "displayName": "CodeBlock-Manager",
   "description": "Tauscht PowerShell-Funktionen live aus der Zwischenablage im Editor aus.",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "publisher": "RoccoAmmon",
+  "icon": "images/icon.png",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -93,6 +94,7 @@
     "@types/node": "^20.x",
     "@types/vscode": "^1.85.0",
     "@vscode/vsce": "^3.9.2",
+    "sharp": "^0.35.2",
     "typescript": "^5.3.0"
   }
 }
