@@ -1,0 +1,98 @@
+{
+  "name": "codeblock-manager",
+  "displayName": "CodeBlock-Manager",
+  "description": "Tauscht PowerShell-Funktionen live aus der Zwischenablage im Editor aus.",
+  "version": "1.0.0",
+  "publisher": "RoccoAmmon",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RoccoAmmon/CodeBlock-Manager-VSC.git"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "powershell",
+    "function",
+    "replace",
+    "clipboard"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "codeblockManager.funktionErsetzen",
+        "title": "CodeBlock: Funktion aus Zwischenablage einfuegen"
+      },
+      {
+        "command": "codeblockManager.liveToggle",
+        "title": "CodeBlock: Live-Ueberwachung ein/aus"
+      },
+      {
+        "command": "codeblockManager.markierungenLoeschen",
+        "title": "CodeBlock: Markierungen loeschen"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "codeblockManager.funktionErsetzen",
+        "key": "ctrl+alt+v",
+        "when": "editorTextFocus"
+      }
+    ],
+    "configuration": {
+      "title": "CodeBlock-Manager",
+      "properties": {
+        "codeblockManager.liveUeberwachung": {
+          "type": "boolean",
+          "default": false,
+          "description": "Zwischenablage automatisch ueberwachen und Funktionen einfuegen."
+        },
+        "codeblockManager.neueFunktionenAnhaengen": {
+          "type": "boolean",
+          "default": true,
+          "description": "Neue Funktionen ans Dateiende anhaengen, falls nicht vorhanden."
+        },
+        "codeblockManager.vorschauDiff": {
+          "type": "boolean",
+          "default": true,
+          "description": "Vor dem Ersetzen ein Diff-Fenster (alt vs. neu) zur Bestaetigung anzeigen."
+        },
+        "codeblockManager.autoBackup": {
+          "type": "boolean",
+          "default": true,
+          "description": "Vor jeder Ersetzung automatisch eine .bak-Sicherung der Datei erstellen."
+        },
+        "codeblockManager.kommentareEinbeziehen": {
+          "type": "boolean",
+          "default": true,
+          "description": "Vorangehende Kommentarzeilen bzw. Comment-Based-Help (<# #>) mit ersetzen."
+        },
+        "codeblockManager.markierungTimeoutSek": {
+          "type": "number",
+          "default": 5,
+          "description": "Sekunden, nach denen die farbige Markierung automatisch ausgeblendet wird (0 = nie)."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.x",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.9.2",
+    "typescript": "^5.3.0"
+  }
+}

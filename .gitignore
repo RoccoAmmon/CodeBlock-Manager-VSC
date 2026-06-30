@@ -1,0 +1,19 @@
+# Abhaengigkeiten
+node_modules/
+
+# Kompilat
+out/
+dist/
+*.vsix
+
+# Backups der Extension
+*.bak
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor / OS
+.vscode-test/
+.DS_Store
+Thumbs.db
