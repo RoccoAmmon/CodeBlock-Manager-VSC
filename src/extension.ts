@@ -107,6 +107,13 @@ export function activate(context: vscode.ExtensionContext) {
         })
     );
 
+    // Clipboard-Cache leeren bei Workspace-Wechsel (kein altes Projekt-Clipboard mehr)
+    context.subscriptions.push(
+        vscode.workspace.onDidChangeWorkspaceFolders(() => {
+            letzteClipboard = '';
+        })
+    );
+
     // Falls in den Einstellungen Live aktiviert ist, direkt starten
     const config = vscode.workspace.getConfiguration('codeblockManager');
     if (config.get<boolean>('liveUeberwachung')) {
@@ -155,7 +162,7 @@ async function verarbeiteClipboard(clip: string, manuell: boolean) {
         const vorschau = config.get<boolean>('vorschauDiff', true);
         const backup = config.get<boolean>('autoBackup', true);
 
-        const bloecke = getAlleBloecke(clip, kommentare);
+        const bloecke = getAlleBloecke(clip);
         if (bloecke.length === 0) {
             if (manuell) { vscode.window.showInformationMessage('Kein bekannter Block im Clipboard erkannt.'); }
             return;
@@ -173,9 +180,9 @@ async function verarbeiteClipboard(clip: string, manuell: boolean) {
             const bereich = getBlockBereich(inhalt, blk.name);
 
             if (bereich) {
-                // Zeilenanfang + optionale Kommentarzeilen darueber einbeziehen
+                // Zeilenanfang + Kommentar nur ersetzen, wenn kopierter Block auch Kommentar hat
                 const zeilenStart = inhalt.lastIndexOf('\n', bereich.start - 1) + 1;
-                const start = kommentare ? erweitereUmKommentare(inhalt, bereich.start) : zeilenStart;
+                const start = (kommentare && blk.hatKommentar) ? erweitereUmKommentare(inhalt, bereich.start) : zeilenStart;
                 const zielEinzug = (inhalt.substring(zeilenStart, bereich.start).match(/^[\t ]*/) || [''])[0];
                 const neuerText = passeEinzugAn(blk.code, zielEinzug);
                 aenderungen.push({
@@ -428,8 +435,8 @@ function passeEinzugAn(code: string, zielEinzug: string): string {
 }
 
 // === Alle Bloecke aus einem Code-Text ermitteln ==============================
-function getAlleBloecke(codeText: string, mitKommentaren: boolean): { name: string; code: string }[] {
-    const ergebnis: { name: string; code: string }[] = [];
+function getAlleBloecke(codeText: string): { name: string; code: string; hatKommentar: boolean }[] {
+    const ergebnis: { name: string; code: string; hatKommentar: boolean }[] = [];
     const regexKopf = new RegExp('^\\s*(?:' + KEYWORD_REGEX_TEIL + ')\\s+([A-Za-z_][\\w-]*)', 'gim');
     let match: RegExpExecArray | null;
 
@@ -437,9 +444,11 @@ function getAlleBloecke(codeText: string, mitKommentaren: boolean): { name: stri
         const name = match[1];
         const bereich = getBlockBereich(codeText, name, match.index);
         if (bereich) {
-            const start = mitKommentaren ? erweitereUmKommentare(codeText, bereich.start) : bereich.start;
+            const kommentarStart = erweitereUmKommentare(codeText, bereich.start);
+            const hatKommentar = kommentarStart < bereich.start;
+            const start = kommentarStart; // immer inkl. Kommentar fuer den einzufuegenden Code
             const code = codeText.substring(start, bereich.start + bereich.laenge).replace(/\s+$/, '');
-            ergebnis.push({ name, code });
+            ergebnis.push({ name, code, hatKommentar });
         }
     }
     return ergebnis;
