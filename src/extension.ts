@@ -200,7 +200,6 @@ async function verarbeiteClipboard(clip: string, manuell: boolean) {
             const ok = await zeigeDiffUndBestaetige(dokument, vorschlag);
             if (!ok) {
                 setzeStatus('Verworfen.');
-                letzteClipboard = ''; // Live-Timer zurücksetzen, damit erneutes Kopieren erkannt wird
                 return;
             }
         }
