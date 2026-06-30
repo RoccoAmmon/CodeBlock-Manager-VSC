@@ -19,14 +19,6 @@
   </a>
 </p>
 
-<p align="center">
-  <a href="https://marketplace.visualstudio.com/items?itemName=RoccoAmmon.codeblock-manager">
-    <img src="https://img.shields.io/visual-studio-marketplace/v/RoccoAmmon.codeblock-manager?style=flat-square&label=VS%20Marketplace&color=007acc" alt="VS Marketplace">
-  </a>
-  <a href="https://marketplace.visualstudio.com/items?itemName=RoccoAmmon.codeblock-manager">
-    <img src="https://img.shields.io/visual-studio-marketplace/d/RoccoAmmon.codeblock-manager?style=flat-square&label=Marketplace%20Downloads&color=2ea043" alt="Marketplace Downloads">
-  </a>
-</p>
 
 Tauscht PowerShell-Bloecke (`function`, `filter`, `workflow`, `configuration`, `class`, `enum`) **live im Editor** aus der Zwischenablage aus – mit Diff-Vorschau, Kommentar-Erhalt, automatischer Einrückung und Sicherung.
 
