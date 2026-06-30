@@ -1,7 +1,23 @@
 # CodeBlock-Manager für VS Code
 
-![Visual Studio Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/RoccoAmmon.codeblock-manager)
-![Visual Studio Marketplace Downloads](https://img.shields.io/visual-studio-marketplace/d/RoccoAmmon.codeblock-manager)
+<p align="center">
+  <img src="images/icon.png" width="96" height="96" alt="CodeBlock-Manager Icon">
+</p>
+
+<p align="center">
+  <a href="https://marketplace.visualstudio.com/items?itemName=RoccoAmmon.codeblock-manager">
+    <img src="https://img.shields.io/visual-studio-marketplace/v/RoccoAmmon.codeblock-manager?style=for-the-badge&logo=visualstudiocode&label=Version&color=0078d7" alt="Version">
+  </a>
+  <a href="https://marketplace.visualstudio.com/items?itemName=RoccoAmmon.codeblock-manager">
+    <img src="https://img.shields.io/visual-studio-marketplace/d/RoccoAmmon.codeblock-manager?style=for-the-badge&logo=visualstudiocode&label=Downloads&color=2ea043" alt="Downloads">
+  </a>
+  <a href="https://marketplace.visualstudio.com/items?itemName=RoccoAmmon.codeblock-manager">
+    <img src="https://img.shields.io/visual-studio-marketplace/i/RoccoAmmon.codeblock-manager?style=for-the-badge&logo=visualstudiocode&label=Installationen&color=8957e5" alt="Installationen">
+  </a>
+  <a href="https://marketplace.visualstudio.com/items?itemName=RoccoAmmon.codeblock-manager">
+    <img src="https://img.shields.io/visual-studio-marketplace/r/RoccoAmmon.codeblock-manager?style=for-the-badge&logo=visualstudiocode&label=Bewertung&color=e3a612" alt="Bewertung">
+  </a>
+</p>
 
 Tauscht PowerShell-Bloecke (`function`, `filter`, `workflow`, `configuration`, `class`, `enum`) **live im Editor** aus der Zwischenablage aus – mit Diff-Vorschau, Kommentar-Erhalt, automatischer Einrückung und Sicherung.
 
