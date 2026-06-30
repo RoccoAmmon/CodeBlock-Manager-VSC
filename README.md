@@ -5,23 +5,30 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/RoccoAmmon/CodeBlock-Manager-VSC/releases">
+    <img src="https://img.shields.io/github/v/release/RoccoAmmon/CodeBlock-Manager-VSC?style=for-the-badge&logo=github&label=Version&color=0078d7" alt="Version">
+  </a>
+  <a href="https://github.com/RoccoAmmon/CodeBlock-Manager-VSC/releases">
+    <img src="https://img.shields.io/github/downloads/RoccoAmmon/CodeBlock-Manager-VSC/total?style=for-the-badge&logo=github&label=Downloads&color=2ea043" alt="Downloads">
+  </a>
+  <a href="https://github.com/RoccoAmmon/CodeBlock-Manager-VSC">
+    <img src="https://img.shields.io/github/languages/code-size/RoccoAmmon/CodeBlock-Manager-VSC?style=for-the-badge&logo=github&label=Gr%C3%B6%C3%9Fe&color=8957e5" alt="Größe">
+  </a>
+  <a href="https://github.com/RoccoAmmon/CodeBlock-Manager-VSC/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/RoccoAmmon/CodeBlock-Manager-VSC?style=for-the-badge&logo=github&label=Lizenz&color=e3a612" alt="Lizenz">
+  </a>
+</p>
+
+<p align="center">
   <a href="https://marketplace.visualstudio.com/items?itemName=RoccoAmmon.codeblock-manager">
-    <img src="https://img.shields.io/visual-studio-marketplace/v/RoccoAmmon.codeblock-manager?style=for-the-badge&logo=visualstudiocode&label=Version&color=0078d7" alt="Version">
+    <img src="https://img.shields.io/visual-studio-marketplace/v/RoccoAmmon.codeblock-manager?style=flat-square&label=VS%20Marketplace&color=007acc" alt="VS Marketplace">
   </a>
   <a href="https://marketplace.visualstudio.com/items?itemName=RoccoAmmon.codeblock-manager">
-    <img src="https://img.shields.io/visual-studio-marketplace/d/RoccoAmmon.codeblock-manager?style=for-the-badge&logo=visualstudiocode&label=Downloads&color=2ea043" alt="Downloads">
-  </a>
-  <a href="https://marketplace.visualstudio.com/items?itemName=RoccoAmmon.codeblock-manager">
-    <img src="https://img.shields.io/visual-studio-marketplace/i/RoccoAmmon.codeblock-manager?style=for-the-badge&logo=visualstudiocode&label=Installationen&color=8957e5" alt="Installationen">
-  </a>
-  <a href="https://marketplace.visualstudio.com/items?itemName=RoccoAmmon.codeblock-manager">
-    <img src="https://img.shields.io/visual-studio-marketplace/r/RoccoAmmon.codeblock-manager?style=for-the-badge&logo=visualstudiocode&label=Bewertung&color=e3a612" alt="Bewertung">
+    <img src="https://img.shields.io/visual-studio-marketplace/d/RoccoAmmon.codeblock-manager?style=flat-square&label=Marketplace%20Downloads&color=2ea043" alt="Marketplace Downloads">
   </a>
 </p>
 
 Tauscht PowerShell-Bloecke (`function`, `filter`, `workflow`, `configuration`, `class`, `enum`) **live im Editor** aus der Zwischenablage aus – mit Diff-Vorschau, Kommentar-Erhalt, automatischer Einrückung und Sicherung.
-
----
 
 ## 📖 Anleitung
 
