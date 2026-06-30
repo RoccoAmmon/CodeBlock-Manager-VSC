@@ -22,6 +22,7 @@ let letzteClipboard = '';
 let liveTimer: ReturnType<typeof setInterval> | undefined;
 let markierungTimer: ReturnType<typeof setTimeout> | undefined;
 let statusBar: vscode.StatusBarItem;
+let cooldownBis = 0; // Timestamp: kein neues Diff vor diesem Zeitpunkt
 
 // --- Vorschau-Inhalte fuer das Diff-Fenster ---------------------------------
 const vorschauInhalte = new Map<string, string>();
@@ -67,6 +68,7 @@ export function activate(context: vscode.ExtensionContext) {
     // --- Befehl: Block aus Zwischenablage einfuegen --------------------------
     context.subscriptions.push(
         vscode.commands.registerCommand('codeblockManager.funktionErsetzen', async () => {
+            if (Date.now() < cooldownBis) { return; }
             const clip = await vscode.env.clipboard.readText();
             await verarbeiteClipboard(clip, true);
         })
@@ -119,6 +121,7 @@ function starteLiveTimer() {
     stoppeLiveTimer();
     const triggerRegex = new RegExp('^\\s*(?:' + KEYWORD_REGEX_TEIL + ')\\s+', 'im');
     liveTimer = setInterval(async () => {
+        if (Date.now() < cooldownBis) { return; }
         const clip = await vscode.env.clipboard.readText();
         if (clip && clip !== letzteClipboard && triggerRegex.test(clip)) {
             letzteClipboard = clip;
@@ -137,6 +140,9 @@ function stoppeLiveTimer() {
 // === Hauptlogik: Clipboard verarbeiten =======================================
 async function verarbeiteClipboard(clip: string, manuell: boolean) {
     try {
+        // Cooldown: nach Verwerfen 3 s keine neuen Diffs
+        if (Date.now() < cooldownBis) { return; }
+
         const editor = vscode.window.activeTextEditor;
         if (!editor) {
             if (manuell) { vscode.window.showWarningMessage('Keine Datei geoeffnet.'); }
@@ -200,6 +206,7 @@ async function verarbeiteClipboard(clip: string, manuell: boolean) {
             const ok = await zeigeDiffUndBestaetige(dokument, vorschlag);
             if (!ok) {
                 setzeStatus('Verworfen.');
+                cooldownBis = Date.now() + 3000; // 3 s Pause
                 return;
             }
         }
@@ -231,6 +238,7 @@ async function verarbeiteClipboard(clip: string, manuell: boolean) {
 
         // Clipboard-Cache aktualisieren (Live-Timer und Manual in Sync halten)
         letzteClipboard = clip;
+        cooldownBis = 0; // Cooldown zurücksetzen
 
         // Dokument wieder in den Vordergrund holen (nach evtl. Diff-Ansicht)
         const sichtbar = await vscode.window.showTextDocument(dokument, { preview: false });
