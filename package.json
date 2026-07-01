@@ -1,8 +1,8 @@
 {
   "name": "codeblock-manager",
   "displayName": "CodeBlock-Manager",
-  "description": "Tauscht PowerShell-Funktionen live aus der Zwischenablage im Editor aus.",
-  "version": "1.0.7",
+  "description": "Tauscht Code-Bloecke (function, class, def, etc.) live aus der Zwischenablage im Editor aus – sprachuebergreifend mit TreeView-Navigation.",
+  "version": "1.1.0",
   "publisher": "RoccoAmmon",
   "icon": "images/icon.png",
   "license": "MIT",
@@ -19,18 +19,36 @@
   "keywords": [
     "powershell",
     "function",
+    "class",
     "replace",
-    "clipboard"
+    "clipboard",
+    "codeblock",
+    "block-navigator",
+    "treeview",
+    "python",
+    "typescript",
+    "javascript",
+    "csharp"
   ],
   "activationEvents": [
-    "onStartupFinished"
+    "onStartupFinished",
+    "onView:codeblockManager.blockNavigator"
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "views": {
+      "explorer": [
+        {
+          "type": "tree",
+          "id": "codeblockManager.blockNavigator",
+          "name": "Block-Navigator"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "codeblockManager.funktionErsetzen",
-        "title": "CodeBlock: Funktion aus Zwischenablage einfuegen"
+        "title": "CodeBlock: Block aus Zwischenablage einfuegen/ersetzen"
       },
       {
         "command": "codeblockManager.liveToggle",
@@ -39,8 +57,25 @@
       {
         "command": "codeblockManager.markierungenLoeschen",
         "title": "CodeBlock: Markierungen loeschen"
+      },
+      {
+        "command": "codeblockManager.navigiereZuBlock",
+        "title": "CodeBlock: Zu Block navigieren"
+      },
+      {
+        "command": "codeblockManager.ersetzteBlockAusTree",
+        "title": "CodeBlock: Block aus Zwischenablage ersetzen"
       }
     ],
+    "menus": {
+      "view/item/context": [
+        {
+          "command": "codeblockManager.ersetzteBlockAusTree",
+          "when": "view == codeblockManager.blockNavigator && viewItem == blockItem",
+          "group": "inline"
+        }
+      ]
+    },
     "keybindings": [
       {
         "command": "codeblockManager.funktionErsetzen",

@@ -20,13 +20,13 @@
 </p>
 
 
-Tauscht PowerShell-Bloecke (`function`, `filter`, `workflow`, `configuration`, `class`, `enum`) **live im Editor** aus der Zwischenablage aus – mit Diff-Vorschau, Kommentar-Erhalt, automatischer Einrückung und Sicherung.
+Tauscht Code-Bloecke (`function`, `class`, `def`, `enum`, uvm.) **sprachübergreifend live im Editor** aus der Zwischenablage aus – mit Diff-Vorschau, Kommentar-Erhalt, automatischer Einrückung, Sicherung **und Block-Navigator in der Sidebar**.
 
 ## 📖 Anleitung
 
 ### Grundlegende Verwendung
 
-1. **PowerShell-Datei** (`.ps1`, `.psm1`) im Editor öffnen.
+1. **Eine unterstützte Datei** (`.ps1`, `.py`, `.js`, `.ts`, `.cs`, `.java`, `.go`, `.rb`, `.rs`, `.php`, `.cpp`) im Editor öffnen.
 2. Einen Block kopieren – z. B. eine ganze Funktion mit **Strg+C**.
 3. **`Strg+Alt+V`** drücken (oder Befehlspalette → „CodeBlock: Funktion aus Zwischenablage einfügen").
 
@@ -56,10 +56,12 @@ Wenn ein Block in der aktuellen Datei noch nicht existiert, wird er **ans Ende d
 
 | # | Funktion | Beschreibung |
 |---|----------|--------------|
-| 🔄 | **Block ersetzen** | Erkennt `function`, `filter`, `workflow`, `configuration`, `class`, `enum` aus der Zwischenablage |
+| 🌍 | **Sprachübergreifend** | Unterstützt PowerShell, Python, JavaScript, TypeScript, C#, Java, Go, Ruby, Rust, PHP, C/C++ |
+| 🔄 | **Block ersetzen** | Erkennt Blöcke (`function`, `def`, `class`, `fn`, `func`, uvm.) aus der Zwischenablage |
 | 👀 | **Diff-Vorschau** | Zeigt alt ↔ neu vor dem Ersetzen; „Übernehmen" oder „Verwerfen" per Klick |
-| 💬 | **Kommentar-Erhalt** | Vorangehende `<# .SYNOPSIS … #>` und `#`-Zeilen werden mit ersetzt |
+| 💬 | **Kommentar-Erhalt** | Vorangehende Kommentare (`#`, `//`, `/* */`, `<# #>`, `'''`) werden mit ersetzt |
 | 📐 | **Einrückung anpassen** | Eingefügter Code übernimmt die Einrückungstiefe der Zielstelle |
+| 🌲 | **Block-Navigator (Sidebar)** | Alle Blöcke der aktuellen Datei im TreeView; Klick = Navigation, Rechtsklick = Ersetzen |
 | 🎯 | **Sprung zur Änderung** | Cursor springt nach dem Ersetzen direkt zur ersten geänderten Stelle |
 | 💾 | **Auto-Backup** | Vor jeder Ersetzung wird eine `.bak`-Datei neben der Originaldatei erstellt |
 | 🟡🟢 | **Farbige Markierung** | Gelb = ersetzt, Grün = angehängt; blendet nach X s oder bei Eingabe aus |
@@ -92,6 +94,8 @@ Wenn ein Block in der aktuellen Datei noch nicht existiert, wird er **ans Ende d
 | `codeblockManager.funktionErsetzen` | `Strg+Alt+V` | Block aus Zwischenablage einfügen/ersetzen |
 | `codeblockManager.liveToggle` | Statusleiste (Klick) | Live-Überwachung ein-/ausschalten |
 | `codeblockManager.markierungenLoeschen` | — | Gelbe/grüne Markierungen manuell entfernen |
+| `codeblockManager.navigiereZuBlock` | TreeView (Klick) | Zu Block im Code springen |
+| `codeblockManager.ersetzteBlockAusTree` | TreeView (Rechtsklick) | Block aus Zwischenablage ersetzen |
 
 ---
 
@@ -100,6 +104,26 @@ Wenn ein Block in der aktuellen Datei noch nicht existiert, wird er **ans Ende d
 - **Keine Netzwerkzugriffe** – das Plugin arbeitet rein lokal
 - **Keine Dateimanipulation ohne Bestätigung** – Diff-Vorschau verhindert versehentliches Überschreiben
 - **Backup vor jeder Änderung** – die `.bak`-Datei liegt neben der bearbeiteten Datei
+
+---
+
+## 🌍 Unterstützte Sprachen
+
+| Sprache | Erweiterungen | Erkannte Blöcke |
+|---------|---------------|-----------------|
+| PowerShell | `.ps1`, `.psm1`, `.psd1` | `function`, `filter`, `workflow`, `configuration`, `class`, `enum` |
+| Python | `.py`, `.pyw` | `def`, `class`, `async def` |
+| JavaScript | `.js`, `.jsx`, `.mjs`, `.cjs` | `function`, `class`, `async function` |
+| TypeScript | `.ts`, `.tsx`, `.mts`, `.cts` | `function`, `class`, `async function` |
+| C# | `.cs` | `class`, `struct`, `interface`, `enum`, `record` |
+| Java | `.java` | `class`, `interface`, `enum`, `record` |
+| Go | `.go` | `func`, `type` |
+| Ruby | `.rb`, `.ruby` | `def`, `class`, `module` |
+| Rust | `.rs` | `fn`, `struct`, `enum`, `trait`, `impl` |
+| PHP | `.php` | `function`, `class`, `interface`, `trait`, `enum` |
+| C/C++ | `.cpp`, `.cxx`, `.cc`, `.c`, `.h`, `.hpp` | `class`, `struct`, `enum` |
+
+> 💡 **Neue Sprache gewünscht?** Einfach in `src/blockPatterns.ts` eine neue `LanguageConfig` hinzufügen!
 
 ---
 
@@ -146,6 +170,40 @@ class Person {
 }
 ```
 
+**Beispiel 4: Python-Funktion ersetzen**
+```python
+# Alte Funktion:
+def calculate(x, y):
+    return x + y
+
+# Kopiert:
+def calculate(x, y):
+    """Berechnet das Produkt"""
+    return x * y
+
+# Strg+Alt+V → Diff prüfen → Übernehmen → fertig
+```
+
+**Beispiel 5: TypeScript-Klasse ersetzen**
+```typescript
+// Alte Klasse:
+class User {
+    name: string;
+}
+
+// Kopiert:
+class User {
+    name: string;
+    email: string;
+    constructor(name: string, email: string) {
+        this.name = name;
+        this.email = email;
+    }
+}
+
+// Strg+Alt+V → übernehmen
+```
+
 ---
 
 ## 🔧 Entwicklung
@@ -156,6 +214,8 @@ npm run compile   # TypeScript kompilieren
 npm run package   # VSIX-Paket bauen
 F5                # Extension Development Host starten
 ```
+
+> **Hinweis:** Node.js muss im PATH sein, sonst direkt `& 'C:\Program Files\nodejs\node.exe' node_modules/typescript/bin/tsc -p ./` verwenden.
 
 Das VSIX-Paket kann manuell über die Extensions-Ansicht („Aus VSIX installieren…") oder via Marketplace bezogen werden.
 
@@ -170,6 +230,12 @@ Bei Push eines Tags `v*` wird automatisch:
 4. (optional) Im VS Code Marketplace veröffentlicht
 
 ```powershell
-git tag v1.0.3
-git push origin v1.0.3
+git tag v1.1.0
+git push origin v1.1.0
 ```
+
+---
+
+## 📜 Changelog
+
+Siehe [CHANGELOG.md](CHANGELOG.md) für alle Versionen und Änderungen.

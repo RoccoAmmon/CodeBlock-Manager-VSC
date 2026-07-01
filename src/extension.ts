@@ -1,20 +1,26 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import {
+    getLanguageConfig,
+    getLanguageForFile,
+    getAlleBloecke,
+    getBlockBereich,
+    erweitereUmKommentare,
+    passeEinzugAn,
+    hatBlockInClipboard,
+    LanguageConfig,
+} from './blockPatterns';
+import { BlockTreeProvider, BlockTreeItem } from './blockTreeProvider';
 
 // =============================================================================
 // CodeBlock-Manager fuer VS Code
-// Tauscht PowerShell-Bloecke (function, filter, workflow, configuration,
-// class, enum) aus der Zwischenablage live im Editor aus.
+// Tauscht Code-Bloecke (function, class, def, etc.) aus der Zwischenablage
+// live im Editor aus. Sprachuebergreifend mit TreeView-Navigation.
 // =============================================================================
 
-// --- Konstanten --------------------------------------------------------------
-// Unterstuetzte Block-Schluesselwoerter (Robustheit: mehr Block-Typen)
-const BLOCK_KEYWORDS = ['function', 'filter', 'workflow', 'configuration', 'class', 'enum'];
-const KEYWORD_REGEX_TEIL = BLOCK_KEYWORDS.join('|');
-
 // --- Dekorationen fuer farbige Hervorhebung ---------------------------------
-let dekoErsetzt: vscode.TextEditorDecorationType;   // gelb
-let dekoAngehaengt: vscode.TextEditorDecorationType; // gruen
+let dekoErsetzt: vscode.TextEditorDecorationType;
+let dekoAngehaengt: vscode.TextEditorDecorationType;
 
 // --- Status fuer Live-Ueberwachung ------------------------------------------
 let liveAktiv = false;
@@ -23,6 +29,7 @@ let liveTimer: ReturnType<typeof setInterval> | undefined;
 let markierungTimer: ReturnType<typeof setTimeout> | undefined;
 let statusBar: vscode.StatusBarItem;
 let cooldownBis = 0; // Timestamp: kein neues Diff vor diesem Zeitpunkt
+let globalTreeProvider: BlockTreeProvider | undefined;
 
 // --- Vorschau-Inhalte fuer das Diff-Fenster ---------------------------------
 const vorschauInhalte = new Map<string, string>();
@@ -36,9 +43,9 @@ const vorschauProvider: vscode.TextDocumentContentProvider = {
 interface Aenderung {
     name: string;
     art: 'ersetzt' | 'angehaengt';
-    start: number;       // Offset im Originaltext
-    ende: number;        // Offset im Originaltext (exklusiv)
-    neuerText: string;   // einzufuegender Text
+    start: number;
+    ende: number;
+    neuerText: string;
 }
 
 // === Aktivierung der Extension ===============================================
@@ -64,6 +71,50 @@ export function activate(context: vscode.ExtensionContext) {
     aktualisiereStatusBar();
     statusBar.show();
     context.subscriptions.push(statusBar);
+
+    // === TreeView-Provider ===================================================
+    globalTreeProvider = new BlockTreeProvider();
+    const treeView = vscode.window.createTreeView('codeblockManager.blockNavigator', {
+        treeDataProvider: globalTreeProvider,
+        showCollapseAll: false,
+    });
+    context.subscriptions.push(treeView);
+
+    // --- Befehl: Zu Block navigieren (aus TreeView) --------------------------
+    context.subscriptions.push(
+        vscode.commands.registerCommand('codeblockManager.navigiereZuBlock', async (uri: vscode.Uri, offset: number) => {
+            try {
+                const doc = await vscode.workspace.openTextDocument(uri);
+                const editor = await vscode.window.showTextDocument(doc, { preview: false });
+                const pos = doc.positionAt(offset);
+                editor.selection = new vscode.Selection(pos, pos);
+                editor.revealRange(new vscode.Range(pos, pos), vscode.TextEditorRevealType.InCenter);
+            } catch (err) {
+                vscode.window.showErrorMessage('Fehler beim Navigieren: ' + (err as Error).message);
+            }
+        })
+    );
+
+    // --- Befehl: Block aus TreeView durch Clipboard ersetzen ------------------
+    context.subscriptions.push(
+        vscode.commands.registerCommand('codeblockManager.ersetzteBlockAusTree', async (item: BlockTreeItem) => {
+            if (!item.blockInfo || !item.fileUri) { return; }
+            const clip = await vscode.env.clipboard.readText();
+            if (!clip) {
+                vscode.window.showWarningMessage('Zwischenablage ist leer.');
+                return;
+            }
+            // Editor auf die Datei setzen
+            try {
+                const doc = await vscode.workspace.openTextDocument(item.fileUri);
+                await vscode.window.showTextDocument(doc, { preview: false });
+            } catch {
+                vscode.window.showErrorMessage('Datei konnte nicht geoeffnet werden.');
+                return;
+            }
+            await verarbeiteClipboard(clip, true);
+        })
+    );
 
     // --- Befehl: Block aus Zwischenablage einfuegen --------------------------
     context.subscriptions.push(
@@ -107,7 +158,7 @@ export function activate(context: vscode.ExtensionContext) {
         })
     );
 
-    // Clipboard-Cache leeren bei Workspace-Wechsel (kein altes Projekt-Clipboard mehr)
+    // Clipboard-Cache leeren bei Workspace-Wechsel
     context.subscriptions.push(
         vscode.workspace.onDidChangeWorkspaceFolders(() => {
             letzteClipboard = '';
@@ -126,11 +177,19 @@ export function activate(context: vscode.ExtensionContext) {
 // === Live-Timer steuern ======================================================
 function starteLiveTimer() {
     stoppeLiveTimer();
-    const triggerRegex = new RegExp('^\\s*(?:' + KEYWORD_REGEX_TEIL + ')\\s+', 'im');
     liveTimer = setInterval(async () => {
         if (Date.now() < cooldownBis) { return; }
         const clip = await vscode.env.clipboard.readText();
-        if (clip && clip !== letzteClipboard && triggerRegex.test(clip)) {
+        if (!clip || clip === letzteClipboard) { return; }
+
+        // Sprache anhand des aktiven Editors bestimmen
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) { return; }
+        const filename = editor.document.uri.fsPath || '';
+        const lang = getLanguageForFile(filename) || getLanguageConfig('powershell');
+        if (!lang) { return; }
+
+        if (hatBlockInClipboard(clip, lang)) {
             letzteClipboard = clip;
             await verarbeiteClipboard(clip, false);
         }
@@ -147,12 +206,19 @@ function stoppeLiveTimer() {
 // === Hauptlogik: Clipboard verarbeiten =======================================
 async function verarbeiteClipboard(clip: string, manuell: boolean) {
     try {
-        // Cooldown: nach Verwerfen 3 s keine neuen Diffs
         if (Date.now() < cooldownBis) { return; }
 
         const editor = vscode.window.activeTextEditor;
         if (!editor) {
             if (manuell) { vscode.window.showWarningMessage('Keine Datei geoeffnet.'); }
+            return;
+        }
+
+        const dokument = editor.document;
+        const filename = dokument.uri.fsPath || '';
+        const lang = getLanguageForFile(filename) || getLanguageConfig('powershell');
+        if (!lang) {
+            if (manuell) { vscode.window.showInformationMessage('Sprache wird nicht unterstuetzt.'); }
             return;
         }
 
@@ -162,13 +228,13 @@ async function verarbeiteClipboard(clip: string, manuell: boolean) {
         const vorschau = config.get<boolean>('vorschauDiff', true);
         const backup = config.get<boolean>('autoBackup', true);
 
-        const bloecke = getAlleBloecke(clip);
+        // Blöcke im Clipboard mit der Ziel-Sprache parsen
+        const bloecke = getAlleBloecke(clip, lang);
         if (bloecke.length === 0) {
             if (manuell) { vscode.window.showInformationMessage('Kein bekannter Block im Clipboard erkannt.'); }
             return;
         }
 
-        const dokument = editor.document;
         const inhalt = dokument.getText();
 
         const aenderungen: Aenderung[] = [];
@@ -177,12 +243,13 @@ async function verarbeiteClipboard(clip: string, manuell: boolean) {
         const uebersprungenListe: string[] = [];
 
         for (const blk of bloecke) {
-            const bereich = getBlockBereich(inhalt, blk.name);
+            const bereich = getBlockBereich(inhalt, blk.name, lang);
 
             if (bereich) {
-                // Zeilenanfang + Kommentar nur ersetzen, wenn kopierter Block auch Kommentar hat
                 const zeilenStart = inhalt.lastIndexOf('\n', bereich.start - 1) + 1;
-                const start = (kommentare && blk.hatKommentar) ? erweitereUmKommentare(inhalt, bereich.start) : zeilenStart;
+                const start = (kommentare && blk.hatKommentar)
+                    ? erweitereUmKommentare(inhalt, bereich.start, lang)
+                    : zeilenStart;
                 const zielEinzug = (inhalt.substring(zeilenStart, bereich.start).match(/^[\t ]*/) || [''])[0];
                 const neuerText = passeEinzugAn(blk.code, zielEinzug);
                 aenderungen.push({
@@ -213,7 +280,7 @@ async function verarbeiteClipboard(clip: string, manuell: boolean) {
             const ok = await zeigeDiffUndBestaetige(dokument, vorschlag);
             if (!ok) {
                 setzeStatus('Verworfen.');
-                cooldownBis = Date.now() + 3000; // 3 s Pause
+                cooldownBis = Date.now() + 3000;
                 return;
             }
         }
@@ -243,16 +310,13 @@ async function verarbeiteClipboard(clip: string, manuell: boolean) {
             return;
         }
 
-        // Clipboard-Cache aktualisieren (Live-Timer und Manual in Sync halten)
         letzteClipboard = clip;
-        cooldownBis = 0; // Cooldown zurücksetzen
+        cooldownBis = 0;
 
-        // Dokument wieder in den Vordergrund holen (nach evtl. Diff-Ansicht)
         const sichtbar = await vscode.window.showTextDocument(dokument, { preview: false });
 
-        // Bereiche markieren + zur ersten Aenderung springen
         const timeout = config.get<number>('markierungTimeoutSek', 5);
-        await markiereUndZeige(sichtbar, ersetztListe, angehaengtListe, timeout);
+        await markiereUndZeige(sichtbar, ersetztListe, angehaengtListe, timeout, lang);
 
         // Statusmeldung
         const teile: string[] = [];
@@ -268,6 +332,11 @@ async function verarbeiteClipboard(clip: string, manuell: boolean) {
         }
         setzeStatus(meldung);
 
+        // TreeView aktualisieren
+        if (globalTreeProvider) {
+            globalTreeProvider.updateForDocument(dokument);
+        }
+
     } catch (err) {
         vscode.window.showErrorMessage('CodeBlock-Fehler: ' + (err as Error).message);
     }
@@ -277,7 +346,7 @@ async function verarbeiteClipboard(clip: string, manuell: boolean) {
 function baueVorschlagstext(inhalt: string, aenderungen: Aenderung[]): string {
     const ersetzungen = aenderungen
         .filter(a => a.art === 'ersetzt')
-        .sort((a, b) => b.start - a.start); // von hinten nach vorne
+        .sort((a, b) => b.start - a.start);
     const anhaenge = aenderungen.filter(a => a.art === 'angehaengt');
 
     let neu = inhalt;
@@ -309,7 +378,6 @@ async function zeigeDiffUndBestaetige(dok: vscode.TextDocument, vorschlag: strin
             'Uebernehmen', 'Verwerfen'
         );
 
-        // Diff-Ansicht schliessen und zurueck zum Original springen
         await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
         await vscode.window.showTextDocument(dok, { preview: false });
         return wahl === 'Uebernehmen';
@@ -334,7 +402,8 @@ async function markiereUndZeige(
     editor: vscode.TextEditor,
     ersetzt: string[],
     angehaengt: string[],
-    timeoutSek: number
+    timeoutSek: number,
+    lang: LanguageConfig
 ) {
     const dokument = editor.document;
     const inhalt = dokument.getText();
@@ -343,33 +412,31 @@ async function markiereUndZeige(
     const rangesAngehaengt: vscode.Range[] = [];
 
     for (const name of ersetzt) {
-        const r = findeRange(dokument, inhalt, name);
+        const r = findeRange(dokument, inhalt, name, lang);
         if (r) { rangesErsetzt.push(r); }
     }
     for (const name of angehaengt) {
-        const r = findeRange(dokument, inhalt, name);
+        const r = findeRange(dokument, inhalt, name, lang);
         if (r) { rangesAngehaengt.push(r); }
     }
 
     editor.setDecorations(dekoErsetzt, rangesErsetzt);
     editor.setDecorations(dekoAngehaengt, rangesAngehaengt);
 
-    // Zur ersten geaenderten Stelle springen
     const ziel = rangesErsetzt[0] || rangesAngehaengt[0];
     if (ziel) {
         editor.selection = new vscode.Selection(ziel.start, ziel.start);
         editor.revealRange(ziel, vscode.TextEditorRevealType.InCenter);
     }
 
-    // Markierung nach X Sekunden automatisch ausblenden
     if (markierungTimer) { clearTimeout(markierungTimer); markierungTimer = undefined; }
     if (timeoutSek > 0) {
         markierungTimer = setTimeout(loescheMarkierungen, timeoutSek * 1000);
     }
 }
 
-function findeRange(dok: vscode.TextDocument, inhalt: string, name: string): vscode.Range | undefined {
-    const b = getBlockBereich(inhalt, name);
+function findeRange(dok: vscode.TextDocument, inhalt: string, name: string, lang: LanguageConfig): vscode.Range | undefined {
+    const b = getBlockBereich(inhalt, name, lang);
     if (!b) { return undefined; }
     return new vscode.Range(dok.positionAt(b.start), dok.positionAt(b.start + b.laenge));
 }
@@ -383,128 +450,6 @@ function loescheMarkierungen() {
     if (markierungTimer) { clearTimeout(markierungTimer); markierungTimer = undefined; }
 }
 
-// === Kommentarblock oberhalb in den Bereich einbeziehen ======================
-// Liefert den Startoffset inkl. vorangehender Kommentarzeilen bzw. <# #>-Block.
-function erweitereUmKommentare(inhalt: string, startIndex: number): number {
-    let pos = inhalt.lastIndexOf('\n', startIndex - 1) + 1; // Zeilenanfang des Blocks
-
-    while (pos > 0) {
-        const vorEnde = pos - 1;                                  // Newline der Zeile darueber
-        const vorStart = inhalt.lastIndexOf('\n', vorEnde - 1) + 1;
-        const zeile = inhalt.substring(vorStart, vorEnde).trim();
-
-        if (zeile === '') {
-            break; // Leerzeile trennt -> Abbruch
-        }
-        if (zeile.endsWith('#>')) {
-            // Blockkommentar -> rueckwaerts bis zum <#
-            const openIdx = inhalt.lastIndexOf('<#', vorEnde);
-            if (openIdx >= 0) {
-                pos = inhalt.lastIndexOf('\n', openIdx - 1) + 1;
-                continue;
-            }
-            break;
-        }
-        if (zeile.startsWith('#')) {
-            pos = vorStart;
-            continue;
-        }
-        break;
-    }
-    return pos;
-}
-
-// === Einrueckung des Codes an die Zieltiefe anpassen =========================
-function passeEinzugAn(code: string, zielEinzug: string): string {
-    const zeilen = code.split(/\r?\n/);
-
-    // Basiseinzug = Einzug der ersten nicht-leeren Zeile
-    let basis = '';
-    for (const z of zeilen) {
-        if (z.trim() !== '') {
-            basis = (z.match(/^[\t ]*/) || [''])[0];
-            break;
-        }
-    }
-
-    return zeilen.map(z => {
-        if (z.trim() === '') { return ''; }
-        const rest = z.startsWith(basis) ? z.substring(basis.length) : z.replace(/^[\t ]*/, '');
-        return zielEinzug + rest;
-    }).join('\n');
-}
-
-// === Alle Bloecke aus einem Code-Text ermitteln ==============================
-function getAlleBloecke(codeText: string): { name: string; code: string; hatKommentar: boolean }[] {
-    const ergebnis: { name: string; code: string; hatKommentar: boolean }[] = [];
-    const regexKopf = new RegExp('^\\s*(?:' + KEYWORD_REGEX_TEIL + ')\\s+([A-Za-z_][\\w-]*)', 'gim');
-    let match: RegExpExecArray | null;
-
-    while ((match = regexKopf.exec(codeText)) !== null) {
-        const name = match[1];
-        const bereich = getBlockBereich(codeText, name, match.index);
-        if (bereich) {
-            const kommentarStart = erweitereUmKommentare(codeText, bereich.start);
-            const hatKommentar = kommentarStart < bereich.start;
-            const start = kommentarStart; // immer inkl. Kommentar fuer den einzufuegenden Code
-            const code = codeText.substring(start, bereich.start + bereich.laenge).replace(/\s+$/, '');
-            ergebnis.push({ name, code, hatKommentar });
-        }
-    }
-    return ergebnis;
-}
-
-// === String-/Kommentar-sichere Klammer-Zaehlung ==============================
-function getBlockBereich(
-    inhalt: string,
-    name: string,
-    abIndex: number = 0
-): { start: number; laenge: number } | null {
-
-    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const regexKopf = new RegExp(
-        '(?:' + KEYWORD_REGEX_TEIL + ')\\s+' + escaped + '\\b[^{]*\\{', 'i'
-    );
-
-    const suchText = abIndex > 0 ? inhalt.substring(abIndex) : inhalt;
-    const kopf = regexKopf.exec(suchText);
-    if (!kopf) { return null; }
-
-    const basis = abIndex > 0 ? abIndex : 0;
-    const startIndex = basis + kopf.index;
-    const klammerStart = basis + kopf.index + kopf[0].length - 1;
-
-    let tiefe = 0;
-    let inSingle = false, inDouble = false, inComment = false, inBlock = false;
-
-    for (let i = klammerStart; i < inhalt.length; i++) {
-        const z = inhalt[i];
-        const vp = i > 0 ? inhalt[i - 1] : '';
-        const nz = i + 1 < inhalt.length ? inhalt[i + 1] : '';
-
-        if (inBlock)   { if (z === '#' && nz === '>') { inBlock = false; i++; } continue; }
-        if (inComment) { if (z === '\n') { inComment = false; } continue; }
-        if (inSingle)  { if (z === "'")  { inSingle = false; } continue; }
-        if (inDouble)  { if (z === '"' && vp !== '`') { inDouble = false; } continue; }
-
-        if (z === '<' && nz === '#') { inBlock = true; i++; continue; }
-
-        switch (z) {
-            case "'": inSingle = true; continue;
-            case '"': inDouble = true; continue;
-            case '#': inComment = true; continue;
-            case '{': tiefe++; break;
-            case '}':
-                tiefe--;
-                if (tiefe === 0) {
-                    return { start: startIndex, laenge: (i - startIndex) + 1 };
-                }
-                break;
-        }
-    }
-    return null;
-}
-
 // === Statusleiste aktualisieren ==============================================
 function aktualisiereStatusBar() {
     statusBar.text = liveAktiv
@@ -515,7 +460,6 @@ function aktualisiereStatusBar() {
 
 function setzeStatus(text: string) {
     statusBar.text = '$(check) ' + text.substring(0, 40);
-    // Nach 4 Sekunden zurueck auf den Live-Status
     setTimeout(aktualisiereStatusBar, 4000);
 }
 
