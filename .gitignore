@@ -17,3 +17,5 @@ npm-debug.log*
 .vscode-test/
 .DS_Store
 Thumbs.db
+
+.wiki/
