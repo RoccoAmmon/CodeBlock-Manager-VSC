@@ -5,17 +5,17 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/RoccoAmmon/CodeBlock-Manager-VSC/releases">
-    <img src="https://img.shields.io/github/v/release/RoccoAmmon/CodeBlock-Manager-VSC?style=for-the-badge&logo=github&label=Version&color=0078d7" alt="Version">
+  <a href="https://gitlab.com/RoccoAmmon/CodeBlock-Manager-VSC/-/releases">
+    <img src="https://img.shields.io/gitlab/v/release/RoccoAmmon/CodeBlock-Manager-VSC?style=for-the-badge&logo=gitlab&label=Version&color=0078d7" alt="Version">
   </a>
-  <a href="https://github.com/RoccoAmmon/CodeBlock-Manager-VSC/releases">
-    <img src="https://img.shields.io/github/downloads/RoccoAmmon/CodeBlock-Manager-VSC/total?style=for-the-badge&logo=github&label=Downloads&color=2ea043" alt="Downloads">
+  <a href="https://gitlab.com/RoccoAmmon/CodeBlock-Manager-VSC/-/releases">
+    <img src="https://img.shields.io/gitlab/v/release/RoccoAmmon/CodeBlock-Manager-VSC?style=for-the-badge&logo=gitlab&label=Release&color=2ea043" alt="Release">
   </a>
-  <a href="https://github.com/RoccoAmmon/CodeBlock-Manager-VSC">
-    <img src="https://img.shields.io/github/languages/code-size/RoccoAmmon/CodeBlock-Manager-VSC?style=for-the-badge&logo=github&label=Gr%C3%B6%C3%9Fe&color=8957e5" alt="Größe">
+  <a href="https://gitlab.com/RoccoAmmon/CodeBlock-Manager-VSC">
+    <img src="https://img.shields.io/gitlab/languages/RoccoAmmon/CodeBlock-Manager-VSC?style=for-the-badge&logo=gitlab&label=Sprache&color=8957e5" alt="Größe">
   </a>
-  <a href="https://github.com/RoccoAmmon/CodeBlock-Manager-VSC/blob/main/LICENSE">
-    <img src="https://img.shields.io/github/license/RoccoAmmon/CodeBlock-Manager-VSC?style=for-the-badge&logo=github&label=Lizenz&color=e3a612" alt="Lizenz">
+  <a href="https://gitlab.com/RoccoAmmon/CodeBlock-Manager-VSC/-/blob/main/LICENSE">
+    <img src="https://img.shields.io/gitlab/license/RoccoAmmon/CodeBlock-Manager-VSC?style=for-the-badge&logo=gitlab&label=Lizenz&color=e3a612" alt="Lizenz">
   </a>
 </p>
 
@@ -221,12 +221,12 @@ Das VSIX-Paket kann manuell über die Extensions-Ansicht („Aus VSIX installier
 
 ---
 
-## 📦 Release-Workflow (GitHub Actions)
+## 📦 Release-Workflow (GitLab Releases)
 
 Bei Push eines Tags `v*` wird automatisch:
 1. Die Extension kompiliert
 2. Ein VSIX-Paket gebaut
-3. Ein GitHub-Release mit VSIX erstellt
+3. Ein GitLab-Release mit VSIX erstellt
 4. (optional) Im VS Code Marketplace veröffentlicht
 
 ```powershell
